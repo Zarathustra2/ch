@@ -23,7 +23,7 @@ defmodule Ch.AggregationTest do
     CREATE MATERIALIZED VIEW ch_candles_one_hour_amt
     (
       ticker LowCardinality(String),
-      time DateTime CODEC(Delta, Default),
+      time DateTime('UTC') CODEC(Delta, Default),
       high SimpleAggregateFunction(max, Float64) CODEC(Delta, Default),
       open AggregateFunction(argMin, Float64, DateTime),
       close AggregateFunction(argMax , Float64, DateTime),
@@ -39,7 +39,7 @@ defmodule Ch.AggregationTest do
     argMinState(t.open, t.time) as open,
     argMaxState(t.close, t.time) as close,
     min(t.low) as low
-    from candle_fragments t
+    from ch_candle_fragments t
     group by ticker, time
     """
 
@@ -47,13 +47,9 @@ defmodule Ch.AggregationTest do
     on_exit(fn -> Ch.Test.sql_exec("drop table ch_candles_one_hour_amt") end)
 
     insert_query = """
-      insert into candle_fragments
+      insert into ch_candle_fragments
         (ticker, time, high, open, close, low)
       VALUES
-      -- 1681410780  UTC
-      -- 1681410840 '2023-04-13 18:34:00' UTC
-      -- 1681410900 '2023-04-13 18:35:00' UTC
-      -- 1681410960 '2023-04-13 18:36:00' UTC
       ('INTC', '2023-04-13 20:33:00', 32, 32, 32, 32),
       ('INTC', '2023-04-13 20:34:00', 33, 33, 33, 33),
       ('INTC', '2023-04-13 20:35:00', 32, 32, 31, 26),
@@ -76,7 +72,7 @@ defmodule Ch.AggregationTest do
     argMinMerge(t.open) as open,
     argMaxMerge(t.close) as close,
     min(t.low) as low
-    from candles_one_hour_amt t
+    from ch_candles_one_hour_amt t
     group by ticker, time
     """
 
